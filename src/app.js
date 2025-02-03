@@ -32,7 +32,7 @@ db.connect(err => {
             throw err;
         }
     })
-})
+});
 
 // Enable JSON request payloads
 app.use(express.json());
@@ -62,6 +62,48 @@ app.post('/user', (req, res) => {
         })
     });
 });
+
+// List all users
+app.get('/users', (req, res) => {
+    const query = 'SELECT Username, Email, Birthday FROM Users';
+    db.query(query, (err, result) => {
+        if(err) {
+            res.status(500).json({ message: 'Failed to get users', error: err });
+            console.error('Failed to get users');
+            return;
+        }
+        res.json({ users: result});
+        console.log('Fetched all users');
+    });
+});
+
+// Authenticate a user
+app.post('/auth', (req, res) => {
+    const username = req.body.username || "";
+    const email = req.body.email || "";
+    const password = req.body.password || "";
+    const query = 'SELECT Username, Pass FROM Users WHERE Username = ? OR Email = ? LIMIT 1';
+
+    db.query(query, [username, email], (err, result) => {
+        if(err) {
+            res.status(500).json({ message: 'Failed to fetch user', error: err });
+            return;
+        }
+        if(result.length < 1) {
+            res.status(500).json({ message: 'User not found' });
+            return;
+        }
+        bcrypt.compare(password, result[0]["Pass"], (err, valid) => {
+            if(valid === true) {
+                res.status(200).json({ message: `Successfully authenticated as ${ result[0]["Username"] }!` });
+                console.log(`${result[0]["Username"]} authenticated successfully`);
+            } else {
+                res.status(403).json({ message: 'Incorrect sign-on credentials' });
+                console.log(`Failed sign-on attempt for ${result[0]["Username"]}`);
+            }
+        })
+    })
+})
 
 // Initialize Express
 app.listen(port, () => {
