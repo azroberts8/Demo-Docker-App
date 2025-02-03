@@ -84,6 +84,7 @@ app.post('/auth', (req, res) => {
     const password = req.body.password || "";
     const query = 'SELECT Username, Pass FROM Users WHERE Username = ? OR Email = ? LIMIT 1';
 
+    // Query database for user by username or email
     db.query(query, [username, email], (err, result) => {
         if(err) {
             res.status(500).json({ message: 'Failed to fetch user', error: err });
@@ -93,6 +94,8 @@ app.post('/auth', (req, res) => {
             res.status(500).json({ message: 'User not found' });
             return;
         }
+
+        // Compare provided password against hash in database
         bcrypt.compare(password, result[0]["Pass"], (err, valid) => {
             if(valid === true) {
                 res.status(200).json({ message: `Successfully authenticated as ${ result[0]["Username"] }!` });
