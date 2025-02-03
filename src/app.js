@@ -11,28 +11,36 @@ const SQLPassword = process.env.SQL_PASSWORD || "";
 const app = express();
 
 // Setup MySQL connection
-const db = mysql.createConnection({
-    host: SQLHost,
-    user: SQLUser,
-    password: SQLPassword,
-    database: "demoapp"
-});
+let db;
 
 // Connect to MySQL database
-db.connect(err => {
-    if(err) {
-        console.error('Database connection failed:', err.stack);
-        return;
-    }
-    console.log(`Database connected to ${SQLUser}@${SQLHost}`);
-    const query = "CREATE TABLE IF NOT EXISTS Users (UUID SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT, Username VARCHAR(30) NOT NULL, Pass CHAR(60) NOT NULL, Email VARCHAR(60), Birthday VARCHAR(60), PRIMARY KEY(UUID), UNIQUE(Username), UNIQUE(Email))"
-    db.query(query, (err, result) => {
+// SQL server may take time to start so retry connecting if failed
+function SQLConnect() {
+    db = mysql.createConnection({
+        host: SQLHost,
+        user: SQLUser,
+        password: SQLPassword,
+        database: "demoapp"
+    });
+
+    db.connect(err => {
         if(err) {
-            console.error("Failed to setup database table!");
-            throw err;
+            console.error('Database connection failed:', err.stack);
+            console.log('Retrying in 15s...');
+            setTimeout(SQLConnect, 15000);
+            return;
         }
+        console.log(`Database connected to ${SQLUser}@${SQLHost}`);
+        const query = "CREATE TABLE IF NOT EXISTS Users (UUID SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT, Username VARCHAR(30) NOT NULL, Pass CHAR(60) NOT NULL, Email VARCHAR(60), Birthday VARCHAR(60), PRIMARY KEY(UUID), UNIQUE(Username), UNIQUE(Email))"
+        db.query(query, (err, result) => {
+            if(err) {
+                console.error("Failed to setup database table!");
+                throw err;
+            }
+        })
     })
-});
+}
+SQLConnect();
 
 // Enable JSON request payloads
 app.use(express.json());

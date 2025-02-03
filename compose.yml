@@ -1,0 +1,42 @@
+services:
+
+  # MySQL Server Container
+  mysql:
+    container_name: demo-mysql-server
+    image: mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_DATABASE=demoapp
+      - MYSQL_USER=demouser
+      - MYSQL_PASSWORD=testword
+      - MYSQL_ALLOW_EMPTY_PASSWORD=true
+
+    # Mount host directory for data persistance
+    volumes:
+      - ./sql-data:/var/lib/mysql
+    
+    # Attach to demonet so our app can communicate with it
+    networks:
+      - demonet
+  
+  # Demo App Server Container
+  demoapp:
+    container_name: demo-app
+    image: demoapp
+    restart: unless-stopped
+    environment:
+      - SQL_HOST=mysql
+      - SQL_USER=demouser
+      - SQL_PASSWORD=testword
+
+    # Expose application port to our host machine
+    ports:
+      - 3000:3000
+    
+    # Attach to demonet so it can see sql database
+    networks:
+      - demonet
+
+networks:
+  demonet:
+    driver: bridge
